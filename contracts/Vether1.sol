@@ -27,44 +27,44 @@ contract Vether1 is ERC20 {
     mapping(address => uint) public override balanceOf;
     mapping(address => mapping(address => uint)) public override allowance;
     // Public Parameters
-    uint coin; uint public emission;
-    uint public currentEra; uint public currentDay;
-    uint public daysPerEra; uint public secondsPerDay;
-    uint public genesis; uint public nextEraTime; uint public nextDayTime;
-    address payable public burnAddress;
+    // uint coin; uint public emission;
+    // uint public currentEra; uint public currentDay;
+    // uint public daysPerEra; uint public secondsPerDay;
+    // uint public genesis; uint public nextEraTime; uint public nextDayTime;
+    address payable public treasuryAddress;
     address public registryAddress;
-    uint public totalFees; uint public totalBurnt;
+    uint public totalFees; /*uint public totalBurnt;*/
     // Public Mappings
-    mapping(uint=>uint) public mapEra_Emission;                                             // Era->Emission
-    mapping(uint=>mapping(uint=>uint)) public mapEraDay_Units;                              // Era,Days->Units
-    mapping(uint=>mapping(uint=>uint)) public mapEraDay_UnitsRemaining;                     // Era,Days->TotalUnits
-    mapping(uint=>mapping(uint=>uint)) public mapEraDay_Emission;                           // Era,Days->Emission
-    mapping(uint=>mapping(uint=>uint)) public mapEraDay_EmissionRemaining;                  // Era,Days->Emission
-    mapping(uint=>mapping(uint=>mapping(address=>uint))) public mapEraDay_MemberUnits;      // Era,Days,Member->Units
-    mapping(address=>mapping(uint=>uint[])) public mapMemberEra_Days;                       // Member,Era->Days[]
+    // mapping(uint=>uint) public mapEra_Emission;                                             // Era->Emission
+    // mapping(uint=>mapping(uint=>uint)) public mapEraDay_Units;                              // Era,Days->Units
+    // mapping(uint=>mapping(uint=>uint)) public mapEraDay_UnitsRemaining;                     // Era,Days->TotalUnits
+    // mapping(uint=>mapping(uint=>uint)) public mapEraDay_Emission;                           // Era,Days->Emission
+    // mapping(uint=>mapping(uint=>uint)) public mapEraDay_EmissionRemaining;                  // Era,Days->Emission
+    // mapping(uint=>mapping(uint=>mapping(address=>uint))) public mapEraDay_MemberUnits;      // Era,Days,Member->Units
+    // mapping(address=>mapping(uint=>uint[])) public mapMemberEra_Days;                       // Member,Era->Days[]
     mapping(address=>bool) public mapAddress_Excluded;                                      // Address->Excluded
     // Events
-    event NewEra(uint era, uint emission, uint time);
-    event NewDay(uint era, uint day, uint time);
-    event Burn(address indexed payer, address indexed member, uint era, uint day, uint units);
+    // event NewEra(uint era, uint emission, uint time);
+    // event NewDay(uint era, uint day, uint time);
+    // event Burn(address indexed payer, address indexed member, uint era, uint day, uint units);
     event Withdrawal(address indexed caller, address indexed member, uint era, uint day, uint value);
 
     //=====================================CREATION=========================================//
     // Constructor
     constructor() public {
         //local
-        name = "Vether"; symbol = "VETH"; decimals = 18; 
+        name = "Boot"; symbol = "BOOT"; decimals = 18; 
         coin = 1; totalSupply = 8190*coin;
-        emission = 2048*coin; currentEra = 1; currentDay = 1;                               // Set emission, era and day
-        genesis = now; daysPerEra = 2; secondsPerDay = 1;                                   // Set genesis time
-        burnAddress = 0x0111011001100001011011000111010101100101;                           // TEST 
+        // emission = 2048*coin; currentEra = 1; currentDay = 1;                               // Set emission, era and day
+        // genesis = now; daysPerEra = 2; secondsPerDay = 1;                                   // Set genesis time
+        treasuryAddress = 0x0111011001100001011011000111010101100101;                           // TEST TODO
 
         //testnet
         // name = "Vether"; symbol = "VETH"; decimals = 18; 
         // coin = 1*10**decimals; totalSupply = 16380*coin;
         // emission = 2048*coin; currentEra = 1; currentDay = 1;                               // Set emission, era and day
         // genesis = now; daysPerEra = 4; secondsPerDay = 10000;                               // Set genesis time
-        // burnAddress = 0xa5d6fbDeA3F72c4289913BA0637DA417a41d8ED9;
+        // treasuryAddress = 0xa5d6fbDeA3F72c4289913BA0637DA417a41d8ED9;
         // registryAddressArray[0] = 0xf5D915570BC477f9B8D6C0E980aA81757A3AaC36;               // Set UniSwap V1 Rinkeby
 
         // mainnet
@@ -72,17 +72,17 @@ contract Vether1 is ERC20 {
         // coin = 1*10**decimals; totalSupply = 1000000*coin;                                  // Set Supply
         // emission = 2048*coin; currentEra = 1; currentDay = 1;                               // Set emission, Era and Day
         // genesis = now; daysPerEra = 244; secondsPerDay = 84200;                             // Set genesis time
-        // burnAddress = 0x0111011001100001011011000111010101100101;                           // Set Burn Address
+        // treasuryAddress = 0x0111011001100001011011000111010101100101;                           // Set Burn Address
         // registryAddress = 0xc0a47dFe034B400B47bDaD5FecDa2621de6c4d95;                       // Set UniSwap V1 Mainnet
         
         balanceOf[address(this)] = totalSupply; 
         emit Transfer(address(0), address(this), totalSupply);                              // Mint the total supply to this address
-        nextEraTime = genesis + (secondsPerDay * daysPerEra);                               // Set next time for coin era
-        nextDayTime = genesis + secondsPerDay;                                              // Set next time for coin day
+        // nextEraTime = genesis + (secondsPerDay * daysPerEra);                               // Set next time for coin era
+        // nextDayTime = genesis + secondsPerDay;                                              // Set next time for coin day
         mapAddress_Excluded[address(this)] = true;                                          // Add this address to be excluded from fees
-        mapEra_Emission[currentEra] = emission;                                             // Map Starting emission
-        mapEraDay_EmissionRemaining[currentEra][currentDay] = emission; 
-        mapEraDay_Emission[currentEra][currentDay] = emission;
+        // mapEra_Emission[currentEra] = emission;                                             // Map Starting emission
+        // mapEraDay_EmissionRemaining[currentEra][currentDay] = emission; 
+        // mapEraDay_Emission[currentEra][currentDay] = emission;
     }
     // ################-REMOVE_THIS_FOR_MAINNET-##########################
     // Allows testing. Remove for mainnet
@@ -134,12 +134,12 @@ contract Vether1 is ERC20 {
     //==================================PROOF-OF-VALUE======================================//
     // Calls when sending Ether
     receive() external payable {
-        burnAddress.call.value(msg.value)("");                                              // Burn ether
-        _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
+        treasuryAddress.call.value(msg.value)("");                                              // Burn ether
+        // _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
     }
-    // Burn ether for nominated member
+/*    // Burn ether for nominated member
     function burnEtherForMember(address member) external payable {
-        burnAddress.call.value(msg.value)("");                                              // Burn ether
+        treasuryAddress.call.value(msg.value)("");                                              // Burn ether
         _recordBurn(msg.sender, member, currentEra, currentDay, msg.value);                 // Record Burn
     }
     // Burn ERC-20 Tokens
@@ -156,7 +156,7 @@ contract Vether1 is ERC20 {
         if (_ex == address(0)) {                                                            // Handle Token without Exchange
             uint _startGas = gasleft();                                                     // Start counting gas
             ERC20(_token).transferFrom(msg.sender, address(this), _amount);                 // Must collect tokens
-            ERC20(_token).transfer(burnAddress, _amount);                                   // Burn token
+            ERC20(_token).transfer(treasuryAddress, _amount);                                   // Burn token
             uint gasPrice = tx.gasprice; uint _endGas = gasleft();                          // Stop counting gas
             uint _gasUsed = (_startGas - _endGas) + 20000;                                  // Calculate gas and add gas overhead
             _eth = _gasUsed * gasPrice;                                                     // Attribute gas burnt
@@ -164,7 +164,7 @@ contract Vether1 is ERC20 {
             ERC20(_token).transferFrom(msg.sender, address(this), _amount);                 // Must collect tokens
             ERC20(_token).approve(_ex, _amount);                                            // Approve Exchange contract to transfer
             _eth = UniswapExchange(_ex).tokenToEthTransferInput(
-                    _amount, 1, block.timestamp + 1000, burnAddress);                       // Uniswap Exchange Transfer function
+                    _amount, 1, block.timestamp + 1000, treasuryAddress);                       // Uniswap Exchange Transfer function
         }
         _recordBurn(msg.sender, _member, currentEra, currentDay, _eth);
     }
@@ -282,4 +282,6 @@ contract Vether1 is ERC20 {
             return balance;                                                                 // Return full balance
         }
     }
+*/
+
 }

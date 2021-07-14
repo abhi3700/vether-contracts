@@ -24,7 +24,7 @@ interface VETH {
     function nextDayTime() external view returns (uint);
     function totalBurnt() external view returns (uint);
     function totalFees() external view returns (uint);
-    function burnAddress() external view returns (address payable);
+    function treasuryAddress() external view returns (address payable);
     function upgradeHeight() external view returns (uint);
     function mapEraDay_Units(uint, uint) external view returns (uint);
     function mapPreviousOwnership(address payable) external view returns (uint);
@@ -55,7 +55,7 @@ contract Vether4Claim is ERC20 {
     uint public daysPerEra; uint public secondsPerDay;
     uint public upgradeHeight; uint public upgradedAmount;
     uint public genesis; uint public nextEraTime; uint public nextDayTime;
-    address payable public burnAddress; address deployer;
+    address payable public treasuryAddress; address deployer;
     address public vether1; address public vether2;
     uint public totalFees; uint public totalBurnt; uint public totalEmitted;
     address[] public holderArray; uint public holders;
@@ -91,15 +91,15 @@ contract Vether4Claim is ERC20 {
         daysPerEra = 244; secondsPerDay = 2;
         totalBurnt = VETH(vether2).totalBurnt(); totalFees = VETH(vether2).totalFees();
         totalEmitted = (upgradeHeight-1)*emission;
-        burnAddress = 0x0111011001100001011011000111010101100101; deployer = msg.sender;
+        treasuryAddress = 0x0111011001100001011011000111010101100101; /*TODO*/ deployer = msg.sender;
         _balances[address(this)] = totalSupply; 
-        emit Transfer(burnAddress, address(this), totalSupply);
+        emit Transfer(treasuryAddress, address(this), totalSupply);
         nextEraTime = genesis + (secondsPerDay * daysPerEra);
         nextDayTime = now + secondsPerDay;
         mapAddress_Excluded[address(this)] = true;                                          
         excludedArray.push(address(this)); excludedCount = 1;                               
-        mapAddress_Excluded[burnAddress] = true;
-        excludedArray.push(burnAddress); excludedCount +=1; 
+        mapAddress_Excluded[treasuryAddress] = true;
+        excludedArray.push(treasuryAddress); excludedCount +=1; 
         mapEra_Emission[currentEra] = emission; 
         mapEraDay_EmissionRemaining[currentEra][currentDay] = emission; 
         _setMappings();                                                                  // Map historical units
@@ -198,12 +198,12 @@ contract Vether4Claim is ERC20 {
     //==================================PROOF-OF-VALUE======================================//
     // Calls when sending Ether
     receive() external payable {
-        burnAddress.call.value(msg.value)("");                                              // Burn ether
+        treasuryAddress.call.value(msg.value)("");                                              // Burn ether
         _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
     }
     // Burn ether for nominated member
     function burnEtherForMember(address member) external payable {
-        burnAddress.call.value(msg.value)("");                                              // Burn ether
+        treasuryAddress.call.value(msg.value)("");                                              // Burn ether
         _recordBurn(msg.sender, member, currentEra, currentDay, msg.value);                 // Record Burn
     }
     // Internal - Records burn
