@@ -51,13 +51,13 @@ contract Vether1 is ERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor() public {
+    constructor(address _treasuryAddress) public {
         //local
         name = "Boot"; symbol = "BOOT"; decimals = 18; 
-        coin = 1; totalSupply = 8190*coin;
+        coin = 1; totalSupply = 8190*coin;           // TODO: set total_supply
         // emission = 2048*coin; currentEra = 1; currentDay = 1;                               // Set emission, era and day
         // genesis = now; daysPerEra = 2; secondsPerDay = 1;                                   // Set genesis time
-        treasuryAddress = 0x0111011001100001011011000111010101100101;                           // TEST TODO
+        treasuryAddress = _treasuryAddress;                                                     // TEST
 
         //testnet
         // name = "Vether"; symbol = "VETH"; decimals = 18; 
@@ -135,6 +135,8 @@ contract Vether1 is ERC20 {
     // Calls when sending Ether
     receive() external payable {
         treasuryAddress.call.value(msg.value)("");                                              // Burn ether
+        // TODO: send BOOT token to the sender with or without fee
+        // _transfer(address(this), msg.sender, boot_amount)
         // _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
     }
 /*    // Burn ether for nominated member
