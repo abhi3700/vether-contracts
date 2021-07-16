@@ -65,21 +65,19 @@ contract Vether4 is ERC20 {
 
     //=====================================CREATION=========================================//
     // Constructor
-    constructor(address _vether1, address _vether2, address _vether3) public {
-        vether1 = _vether1;                                // First Vether
-        vether2 = _vether2;                                // Second Vether
-        vether3 = _vether3;                                // Third Vether
-        upgradeHeight = 1;                                                                 // Height at which to upgrade
-        name = "Vether"; symbol = "VETH"; decimals = 18; 
-        coin = 1; totalSupply = 8190*coin;
+    constructor(address _treasuryAddress) public {
+        // upgradeHeight = 1;                                                                 // Height at which to upgrade
+        name = "Boot"; symbol = "BOOT"; decimals = 18; 
+        /*coin = 1;*/ 
+        totalSupply = 21180364;
         genesis = VETH(vether1).genesis(); emission = 2048*coin; 
         currentEra = 1; currentDay = upgradeHeight;                                         // Begin at Upgrade Height
         daysPerEra = 2; secondsPerDay = 1;
         totalBurnt = VETH(vether2).totalBurnt(); totalFees = 0;
         totalEmitted = (upgradeHeight-1)*emission;
-        treasuryAddress = 0x0111011001100001011011000111010101100101; /*TODO*/ deployer = msg.sender;
+        treasuryAddress = _treasuryAddress; deployer = msg.sender;
         _balances[address(this)] = totalSupply; 
-        emit Transfer(treasuryAddress, address(this), totalSupply);
+        emit Transfer(treasuryAddress, address(this), totalSupply);         // TODO: But, there is no supply in the treasuryAddress
         nextEraTime = genesis + (secondsPerDay * daysPerEra);
         nextDayTime = now + secondsPerDay;
         mapAddress_Excluded[address(this)] = true;                                          
@@ -167,9 +165,15 @@ contract Vether4 is ERC20 {
     //==================================PROOF-OF-VALUE======================================//
     // Calls when sending Ether
     receive() external payable {
-        treasuryAddress.call.value(msg.value)("");                                              // Burn ether
-        _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
+        (bool success, ) = treasuryAddress.call{value:msg.value}(new bytes(0));               // send it to treasuryAddress
+        require(success, "Transfer failed.");        
+        // treasuryAddress.call.value(msg.value)("");                                  // send it to treasuryAddress
+        
+        // TODO: send BOOT token to the sender with or without fee
+        // _transfer(address(this), msg.sender, boot_amount)
+        // _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
     }
+    
     // Burn ether for nominated member
     function burnEtherForMember(address member) external payable {
         treasuryAddress.call.value(msg.value)("");                                              // Burn ether
