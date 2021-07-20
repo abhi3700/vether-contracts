@@ -33,7 +33,7 @@ contract Vether4 is ERC20 {
     using SafeMath for uint;
     // ERC-20 Parameters
     string public name; string public symbol;
-    uint public decimals; uint public override totalSupply;
+    uint public decimals; uint256 public override totalSupply;
     // ERC-20 Mappings
     mapping(address => uint) private _balances;
     mapping(address => mapping(address => uint)) private _allowances;
@@ -56,12 +56,44 @@ contract Vether4 is ERC20 {
     mapping(uint=>mapping(uint=>uint)) public mapEraDay_EmissionRemaining;                  // Era,Days->Emission
     mapping(uint=>mapping(uint=>mapping(address=>uint))) public mapEraDay_MemberUnits;      // Era,Days,Member->Units
     mapping(address=>mapping(uint=>uint[])) public mapMemberEra_Days;                       // Member,Era->Days[]
-    mapping(address=>bool) public mapAddress_Excluded;                                      // Address->Excluded
+    mapping(address=>bool) public mapAddress_Excluded;                                     // Address->Excluded
+    
+
+    // General constants
+    uint256 constant HOUR = 3600;
+    uint256 constant DAY = 86400;
+    uint256 constant WEEK = 86400 * 7;
+    uint256 constant YEAR = WEEK * 52;
+
+    // Supply parameters
+    // SEED_ROUND: constant(uint256) = 0
+    // PUBLIC_ROUND: constant(uint256) = 1
+    // SWERVE_AIRDROP: constant(uint256) = 2
+    // DEVFUND_TEAM: constant(uint256) = 3
+    // COMMUNITY_LP: constant(uint256) = 4
+
+    // INITIAL_SUPPLY: constant(uint256) = 0
+    // INFLATION_DELAY: constant(uint256) = 3 * HOUR # Three Hour delay before minting may begin
+    // RATE_DENOMINATOR: constant(uint256) = 10 ** 18
+    // uint256 constant RATE_TIME = WEEK;                                         // How often the rate goes to the next epoch
+    uint256 constant INITIAL_RATE = 2_474_410 * 10 ** 18 / WEEK;                 // 2,474,410 for the first week
+    uint256 constant EPOCH_INFLATION = 98_831;                                  // 98.831 % of last week
+    uint256 constant LATE_FIX_RATE = 600;                                      // 0.06% total supply
+    uint256 constant INITIAL_RATE_EPOCH_CUTTOF = 260;                          // After 260 Weeks use the late rate
+
+    // Supply variables
+    int28 public miningEpoch;
+    uint256 public startEpochTime;
+    uint256 public rate;
+
+    uint256 startEpochSupply;
+
     // Events
     event NewEra(uint era, uint emission, uint time, uint totalBurnt);
     event NewDay(uint era, uint day, uint time, uint previousDayTotal, uint previousDayMembers);
     event Burn(address indexed payer, address indexed member, uint era, uint day, uint units, uint dailyTotal);
     event Withdrawal(address indexed caller, address indexed member, uint era, uint day, uint value, uint vetherRemaining);
+    event updateMiningParameters(uint256 time, uint256 rate, uint256 supply);
 
     //=====================================CREATION=========================================//
     // Constructor
@@ -69,7 +101,7 @@ contract Vether4 is ERC20 {
         // upgradeHeight = 1;                                                                 // Height at which to upgrade
         name = "Boot"; symbol = "BOOT"; decimals = 18; 
         /*coin = 1;*/ 
-        totalSupply = 21180364;
+        totalSupply = 21_180_364;
         genesis = VETH(vether1).genesis(); emission = 2048*coin; 
         currentEra = 1; currentDay = upgradeHeight;                                         // Begin at Upgrade Height
         daysPerEra = 2; secondsPerDay = 1;
@@ -165,22 +197,24 @@ contract Vether4 is ERC20 {
     //==================================PROOF-OF-VALUE======================================//
     // Calls when sending Ether
     receive() external payable {
-        (bool success, ) = treasuryAddress.call{value:msg.value}(new bytes(0));               // send it to treasuryAddress
+        // for latest version v0.8.6
+/*        (bool success, ) = treasuryAddress.call{value:msg.value}(new bytes(0));               // send it to treasuryAddress
         require(success, "Transfer failed.");        
-        // treasuryAddress.call.value(msg.value)("");                                  // send it to treasuryAddress
+*/       
+        treasuryAddress.call.value(msg.value)("");                                 // send it to treasuryAddress
         
         // TODO: send BOOT token to the sender with or without fee
         // _transfer(address(this), msg.sender, boot_amount)
         // _recordBurn(msg.sender, msg.sender, currentEra, currentDay, msg.value);             // Record Burn
     }
-    
+
     // Burn ether for nominated member
-    function burnEtherForMember(address member) external payable {
+/*    function burnEtherForMember(address member) external payable {
         treasuryAddress.call.value(msg.value)("");                                              // Burn ether
         _recordBurn(msg.sender, member, currentEra, currentDay, msg.value);                 // Record Burn
     }
-    // Internal - Records burn
-    function _recordBurn(address _payer, address _member, uint _era, uint _day, uint _eth) private {
+*/    // Internal - Records burn
+/*    function _recordBurn(address _payer, address _member, uint _era, uint _day, uint _eth) private {
         if (mapEraDay_MemberUnits[_era][_day][_member] == 0){                               // If hasn't contributed to this Day yet
             mapMemberEra_Days[_member][_era].push(_day);                                    // Add it
             mapEraDay_MemberCount[_era][_day] += 1;                                         // Count member
@@ -193,7 +227,7 @@ contract Vether4 is ERC20 {
         emit Burn(_payer, _member, _era, _day, _eth, mapEraDay_Units[_era][_day]);          // Burn event
         _updateEmission();                                                                  // Update emission Schedule
     }
-    // Allows changing an excluded address
+*/    // Allows changing an excluded address
     function addExcluded(address excluded) external {    
         if(!mapAddress_Excluded[excluded]){
             _transfer(msg.sender, address(this), mapEra_Emission[1]/16);                    // Pay fee of 128 Vether
@@ -260,7 +294,7 @@ contract Vether4 is ERC20 {
     }
     //======================================EMISSION========================================//
     // Internal - Update emission function
-    function _updateEmission() private {
+/*    function _updateEmission() private {
         uint _now = now;                                                                    // Find now()
         if (_now >= nextDayTime) {                                                          // If time passed the next Day time
             if (currentDay >= daysPerEra) {                                                 // If time passed the next Era time
@@ -280,6 +314,29 @@ contract Vether4 is ERC20 {
             mapEraDay_Units[_era][_day], mapEraDay_MemberCount[_era][_day]);                // Emit Event
         }
     }
+*/    
+    function _updateEmission() private {
+        uint256 _rate = rate;
+        uint256 _startEpochSupply = startEpochSupply;
+        miningEpoch += 1;
+        startEpochTime = startEpochTime.add(0, RATE_TIME);
+
+        if (miningEpoch == 0) {
+            _rate = INITIAL_RATE;
+        } else {
+            _startEpochSupply = _startEpochSupply.add(0, mul(rate, RATE_TIME));
+            if (miningEpoch < INITIAL_RATE_EPOCH_CUTTOF) {
+                _rate = _rate.mul(1, EPOCH_INFLATION).div(100000);
+            } else {
+                _rate = 0;
+            }
+        }
+
+        startEpochSupply = _startEpochSupply;
+        rate = _rate;
+        emit updateMiningParameters(now, _rate, _startEpochSupply);
+    }
+
     // Calculate Era emission
     function getNextEraEmission() public view returns (uint) {
         if (emission > coin) {                                                              // Normal Emission Schedule
